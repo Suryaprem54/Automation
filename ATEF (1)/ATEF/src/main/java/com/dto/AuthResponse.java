@@ -1,8 +1,6 @@
 package com.dto;
 
-public class AuthResponse {
-
-
+    public class AuthResponse {
 
         private String token;
         private String message;
@@ -27,7 +25,8 @@ public class AuthResponse {
 
         public void setMessage(String message) {
             this.message = message;
-        }
+}
     }
+
 
 

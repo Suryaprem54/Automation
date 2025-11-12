@@ -1,62 +1,72 @@
+
 package com.util;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails; // Import UserDetails
+import org.springframework.security.core.userdetails.UserDetailsService; // Import UserDetailsService
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 
-//public class JwtAuthenticationFilter {
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private final JwtUtils jwtUtils;
+    private final UserDetailsService userDetailsService; // Inject UserDetailsService
 
+    public JwtAuthenticationFilter(JwtUtils jwtUtils, UserDetailsService userDetailsService) {
+        this.jwtUtils = jwtUtils;
+        this.userDetailsService = userDetailsService;
+    }
 
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
+            throws ServletException, IOException {
 
-    @Component
-    public class JwtAuthenticationFilter extends OncePerRequestFilter {
+        String authHeader = request.getHeader("Authorization");
 
-        private final JwtUtils jwtUtils;
-
-        public JwtAuthenticationFilter(JwtUtils jwtUtils) {
-            this.jwtUtils = jwtUtils;
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
         }
 
-        @Override
-        protected void doFilterInternal(
-                HttpServletRequest request,
-                HttpServletResponse response,
-                FilterChain filterChain)
-                throws ServletException, IOException {
+        String token = authHeader.substring(7);
 
-            String authHeader = request.getHeader("Authorization");
+        // Only proceed if SecurityContext is currently empty (not already authenticated)
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            String username = jwtUtils.extractUsername(token);
 
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
+            if (username != null && jwtUtils.validateToken(token)) {
 
-            String token = authHeader.substring(7);
-            if (jwtUtils.validateToken(token)) {
-                String username = jwtUtils.extractUsername(token);
+                // 1. Load UserDetails from database
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
+                // 2. Create Authentication object with loaded user details (including authorities/roles)
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
-                                new User(username, "", Collections.emptyList()),
-                                null,
-                                Collections.emptyList());
+                                userDetails,
+                                null, // Credentials are set to null as this is a stateless filter
+                                userDetails.getAuthorities()); // Use loaded authorities
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                // 3. Set the authenticated user in the SecurityContext
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
-
-            filterChain.doFilter(request, response);
         }
-    }
+
+        filterChain.doFilter(request, response);
+}
+}
 
 
