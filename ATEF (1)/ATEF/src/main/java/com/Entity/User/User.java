@@ -34,6 +34,41 @@ import java.time.LocalDateTime;
             this.createdAt = LocalDateTime.now();
             if (this.role == null) {
                 this.role = "USER";
- }}
+ }
+        }
+
+        public User() {
+        }
+
+        //  Custom Setter for Password (optional customization)
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        //  Getter for Password
+        public String getPassword() {
+            return password;
+        }
+
+        // Getter for Email
+        public String getEmail() {
+            return email;
+        }
+
+        //  Setter for Email
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        //  Getter and Setter for Username
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
     }
+
+
 
